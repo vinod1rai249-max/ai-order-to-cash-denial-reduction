@@ -1,0 +1,26 @@
+# Order-to-Cash Denial Reduction — Python Backend Dependencies
+
+# Web Framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+python-dotenv>=1.1.0
+starlette>=0.41.0
+
+# Google Cloud
+google-cloud-bigquery>=3.27.0
+google-cloud-firestore>=2.19.0
+google-api-core>=2.23.0
+
+# Firebase Auth
+firebase-admin>=6.6.0
+
+# ML / Data
+numpy>=1.26.0
+pandas>=2.2.0
+pyarrow>=18.0.0
+
+# Orchestration
+langgraph>=0.2.0
+
+# HTTP Client (NPI Agent)
+requests>=2.32.0

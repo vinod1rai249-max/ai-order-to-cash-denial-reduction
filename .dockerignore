@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-ssr
+__pycache__
+*.pyc
+.env
+.env.local
+.git
+.vscode
+.idea
+*.log
+.claude
