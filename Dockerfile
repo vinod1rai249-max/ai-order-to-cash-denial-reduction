@@ -52,62 +52,10 @@ COPY tests/ ./tests/
 COPY --from=frontend-build /app/frontend/dist /app/static
 
 # Nginx config: serve frontend + reverse proxy /api to uvicorn
-RUN cat > /etc/nginx/sites-available/default <<'NGINX' \
-server { \
-    listen 8080; \
-    server_name _; \
- \
-    root /app/static; \
-    index index.html; \
- \
-    # Frontend SPA — serve index.html for all non-file routes \
-    location / { \
-        try_files $uri $uri/ /index.html; \
-    } \
- \
-    # Reverse proxy API calls to uvicorn backend \
-    location /api/ { \
-        proxy_pass http://127.0.0.1:8000; \
-        proxy_set_header Host $host; \
-        proxy_set_header X-Real-IP $remote_addr; \
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
-        proxy_set_header X-Forwarded-Proto $scheme; \
-        proxy_read_timeout 120s; \
-    } \
- \
-    # Health check passthrough \
-    location = /health { \
-        proxy_pass http://127.0.0.1:8000/; \
-    } \
-} \
-NGINX
+COPY nginx_default.conf /etc/nginx/sites-available/default
 
 # Supervisor config: run nginx + uvicorn together
-RUN cat > /etc/supervisor/conf.d/app.conf <<'SUPERVISOR' \
-[supervisord] \
-nodaemon=true \
-logfile=/dev/stdout \
-logfile_maxbytes=0 \
- \
-[program:uvicorn] \
-command=uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2 \
-directory=/app \
-autostart=true \
-autorestart=true \
-stdout_logfile=/dev/stdout \
-stdout_logfile_maxbytes=0 \
-stderr_logfile=/dev/stderr \
-stderr_logfile_maxbytes=0 \
- \
-[program:nginx] \
-command=nginx -g "daemon off;" \
-autostart=true \
-autorestart=true \
-stdout_logfile=/dev/stdout \
-stdout_logfile_maxbytes=0 \
-stderr_logfile=/dev/stderr \
-stderr_logfile_maxbytes=0 \
-SUPERVISOR
+COPY supervisord_app.conf /etc/supervisor/conf.d/app.conf
 
 EXPOSE 8080
 
