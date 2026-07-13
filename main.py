@@ -90,10 +90,12 @@ app.add_middleware(TraceIDMiddleware)
 # Mount endpoints
 app.include_router(v4_router)
 
+import threading
+
 @app.on_event("startup")
 def startup_event():
-    logger.info("Gateway starting up. Verifying governance sinks...")
-    init_governance_sink()
+    logger.info("Gateway starting up. Verifying governance sinks in background...")
+    threading.Thread(target=init_governance_sink, daemon=True).start()
 
 @app.get("/")
 def health_check():
