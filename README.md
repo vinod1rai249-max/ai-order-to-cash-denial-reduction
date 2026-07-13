@@ -1,4 +1,4 @@
-# Antigravity OTC - Order-to-Cash Denial Reduction
+# Quest Smart OTC - Order-to-Cash Denial Reduction
 
 An intelligent agentic orchestration platform designed to reduce healthcare insurance claim denials. The system intercepts billing orders at intake, predicts denial risks using BigQuery ML, detects administrative/clinical errors, and triggers an autonomous multi-agent pipeline to remediate errors prior to claim submission.
 
@@ -17,7 +17,7 @@ Manual identification and remediation of these errors is slow, error-prone, and 
 ---
 
 ## 2. Our Approach (How We Solve It)
-Antigravity OTC solves this problem by inserting an **autonomous pre-submission validation layer** between the EHR (Electronic Health Record) intake and the payer clearinghouse. 
+Quest Smart OTC solves this problem by inserting an **autonomous pre-submission validation layer** between the EHR (Electronic Health Record) intake and the payer clearinghouse. 
 
 1. **Denial Prediction (ML):** Evaluates the raw claim against a BigQuery ML model to predict denial probability.
 2. **Deterministic Gating:** Evaluates the claim against standard billing rules to flag specific reject codes.
@@ -86,7 +86,14 @@ The solution is built entirely on GCP services:
 
 ---
 
-## 6. Business Benefits
+## 6. Recent Enhancements & UI Customization
+* **Optimized Review Queue:** The HITL Review queue handles high-volume loads efficiently by bypassing external logging loops. Only unfixable claims (e.g. Out-of-Network services, visit benefit limits exceeded) are displayed in the manual queue.
+* **Single Sign-On Experience:** Simplified the login page by removing traditional credential inputs. Access is granted instantly through a single, all-access "Sign in" button.
+* **Real-time Performance Dashboard:** Upgraded the executive dashboard with a dynamic Recharts BarChart comparing different remediation reasons against the volume of claims in the HITL queue. The Audited Order Queue table displays only active, unresolved issues.
+
+---
+
+## 7. Business Benefits
 * **95%+ Clean Claim Rate:** Auto-remediates $95\%$ of preventable administrative claim rejects prior to payer submission.
 * **Reduced Days Sales Outstanding (DSO):** Accelerates cash flow by bypassing manual billing audits.
 * **Lower Administrative Cost:** Resolves common errors without human auditor intervention.
