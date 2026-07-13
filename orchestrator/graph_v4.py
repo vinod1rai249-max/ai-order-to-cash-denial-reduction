@@ -74,7 +74,6 @@ def save_order_to_db(order: dict, risk_score: float, attempts: int, history: lis
           SELECT
             @order_id AS order_id,
             @claim_id AS claim_id,
-            @patient_name AS patient_name,
             @npi AS npi,
             @payer_id AS payer_id,
             @cpt_code AS cpt_code,
@@ -98,7 +97,6 @@ def save_order_to_db(order: dict, risk_score: float, attempts: int, history: lis
         WHEN MATCHED THEN
           UPDATE SET
             claim_id = S.claim_id,
-            patient_name = S.patient_name,
             npi = S.npi,
             payer_id = S.payer_id,
             cpt_code = S.cpt_code,
@@ -118,15 +116,14 @@ def save_order_to_db(order: dict, risk_score: float, attempts: int, history: lis
             status = S.status,
             trace_id = S.trace_id
         WHEN NOT MATCHED THEN
-          INSERT (order_id, claim_id, patient_name, npi, payer_id, cpt_code, icd10_code, dob, gender, address, patient_id, employer_name, provider_first_name, provider_last_name, provider_state, provider_taxonomy, risk_score, risk_history, remediation_attempts, status, trace_id)
-          VALUES (S.order_id, S.claim_id, S.patient_name, S.npi, S.payer_id, S.cpt_code, S.icd10_code, S.dob, S.gender, S.address, S.patient_id, S.employer_name, S.provider_first_name, S.provider_last_name, S.provider_state, S.provider_taxonomy, S.risk_score, S.risk_history, S.remediation_attempts, S.status, S.trace_id)
+          INSERT (order_id, claim_id, npi, payer_id, cpt_code, icd10_code, dob, gender, address, patient_id, employer_name, provider_first_name, provider_last_name, provider_state, provider_taxonomy, risk_score, risk_history, remediation_attempts, status, trace_id)
+          VALUES (S.order_id, S.claim_id, S.npi, S.payer_id, S.cpt_code, S.icd10_code, S.dob, S.gender, S.address, S.patient_id, S.employer_name, S.provider_first_name, S.provider_last_name, S.provider_state, S.provider_taxonomy, S.risk_score, S.risk_history, S.remediation_attempts, S.status, S.trace_id)
         """
 
         job_config = bigquery.QueryJobConfig(
             query_parameters=[
                 bigquery.ScalarQueryParameter("order_id", "STRING", order.get("order_id") or order.get("claim_id")),
                 bigquery.ScalarQueryParameter("claim_id", "STRING", order.get("claim_id")),
-                bigquery.ScalarQueryParameter("patient_name", "STRING", order.get("patient_name")),
                 bigquery.ScalarQueryParameter("npi", "STRING", order.get("npi")),
                 bigquery.ScalarQueryParameter("payer_id", "STRING", order.get("payer_id")),
                 bigquery.ScalarQueryParameter("cpt_code", "STRING", order.get("cpt_code")),

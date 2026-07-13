@@ -45,7 +45,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   return (
     <div className="app-container">
       <aside className="sidebar">
-        <div className="sidebar-title">Antigravity OTC</div>
+        <div className="sidebar-title">Quest Smart OTC</div>
         
         <nav style={{ flex: 1 }}>
           <ul className="nav-links">

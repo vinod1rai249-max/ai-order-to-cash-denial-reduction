@@ -3,13 +3,14 @@ import apiClient from "../lib/apiClient";
 import { MetricCard } from "../components/MetricCard";
 import { ActivityTable } from "../components/ActivityTable";
 import {
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Cell,
 } from "recharts";
 
 const AGENT_LABELS: Record<string, string> = {
@@ -26,7 +27,7 @@ const AGENT_LABELS: Record<string, string> = {
 
 const BAR_COLORS = [
   "#006039", "#008752", "#00a86b", "#33b584", "#66c39d",
-  "#99d2b6", "#cce0cf", "#3b82f6",
+  "#99d2b6", "#cce0cf", "#3b82f6", "#ef4444"
 ];
 
 function computeDashboardStats(orders: any[]) {
@@ -38,13 +39,26 @@ function computeDashboardStats(orders: any[]) {
   const fixedCount = cleanList.length;
   const escalatedCount = hitlList.length;
   const pendingCount = scoredList.length;
-  const savedValue = fixedCount * 250;
 
-  return { total, fixedCount, escalatedCount, pendingCount, savedValue };
+  return { total, fixedCount, escalatedCount, pendingCount };
 }
 
 function computeRemediationDistribution(orders: any[]) {
-  const fieldCounts: Record<string, number> = {};
+  const counts: Record<string, number> = {
+    "NPI Lookup": 0,
+    "ICD-10 Crosswalk": 0,
+    "Address Standardization": 0,
+    "COB Re-sequencing": 0,
+    "DOB/Gender Fix": 0,
+    "Employer Lookup": 0,
+    "Patient MPI Match": 0,
+    "Patient Info Restore": 0,
+    "HITL Queue Gated": 0,
+  };
+
+  // Count HITL/escalated orders directly from their database status
+  const hitlOrders = orders.filter((o: any) => o.status === "hitl" || o.status === "escalated");
+  counts["HITL Queue Gated"] = hitlOrders.length;
 
   for (const order of orders) {
     let history = order.risk_history;
@@ -54,13 +68,19 @@ function computeRemediationDistribution(orders: any[]) {
     }
     if (!Array.isArray(history)) continue;
 
+    const countedLabelsForOrder = new Set<string>();
+
     for (const entry of history) {
       const patches: string[] = entry.patches || [];
       for (const patch of patches) {
         for (const [field, label] of Object.entries(AGENT_LABELS)) {
-          if (patch.toLowerCase().includes(field.toLowerCase().replace("_", " ")) ||
-              patch.toLowerCase().includes(label.toLowerCase())) {
-            fieldCounts[label] = (fieldCounts[label] || 0) + 1;
+          if (
+            (patch.toLowerCase().includes(field.toLowerCase().replace("_", " ")) ||
+             patch.toLowerCase().includes(label.toLowerCase())) &&
+            !countedLabelsForOrder.has(label)
+          ) {
+            counts[label]++;
+            countedLabelsForOrder.add(label);
             break;
           }
         }
@@ -68,75 +88,18 @@ function computeRemediationDistribution(orders: any[]) {
     }
   }
 
-  const sorted = Object.entries(fieldCounts)
+  // Filter out categories with 0 count to show only active metrics
+  const activeEntries = Object.entries(counts)
+    .filter(([, count]) => count > 0)
     .sort(([, a], [, b]) => b - a);
 
-  const totalPatches = sorted.reduce((sum, [, count]) => sum + count, 0);
+  const totalActions = activeEntries.reduce((sum, [, count]) => sum + count, 0);
 
-  return sorted.map(([label, count]) => ({
+  return activeEntries.map(([label, count]) => ({
     label,
     count,
-    pct: totalPatches > 0 ? Math.round((count / totalPatches) * 100) : 0,
+    pct: totalActions > 0 ? Math.round((count / totalActions) * 100) : 0,
   }));
-}
-
-function computeRiskTrend(orders: any[]) {
-  const dayBuckets: Record<string, { risks: number[]; cleanCount: number; totalCount: number }> = {};
-  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-  for (const order of orders) {
-    let history = order.risk_history;
-    if (!history) continue;
-    if (typeof history === "string") {
-      try { history = JSON.parse(history); } catch { continue; }
-    }
-    if (!Array.isArray(history)) continue;
-
-    for (const entry of history) {
-      if (!entry.timestamp) continue;
-      const d = new Date(entry.timestamp);
-      const dayKey = dayNames[d.getDay()];
-      if (!dayBuckets[dayKey]) {
-        dayBuckets[dayKey] = { risks: [], cleanCount: 0, totalCount: 0 };
-      }
-      dayBuckets[dayKey].risks.push(entry.risk_score || 0);
-      dayBuckets[dayKey].totalCount++;
-    }
-  }
-
-  for (const order of orders) {
-    if (order.status === "clean") {
-      let history = order.risk_history;
-      if (!history) continue;
-      if (typeof history === "string") {
-        try { history = JSON.parse(history); } catch { continue; }
-      }
-      if (Array.isArray(history) && history.length > 0) {
-        const lastEntry = history[history.length - 1];
-        if (lastEntry.timestamp) {
-          const d = new Date(lastEntry.timestamp);
-          const dayKey = dayNames[d.getDay()];
-          if (dayBuckets[dayKey]) {
-            dayBuckets[dayKey].cleanCount++;
-          }
-        }
-      }
-    }
-  }
-
-  const orderedDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  return orderedDays
-    .filter((day) => dayBuckets[day])
-    .map((day) => {
-      const bucket = dayBuckets[day];
-      const avgRisk = bucket.risks.length > 0
-        ? Math.round((bucket.risks.reduce((a, b) => a + b, 0) / bucket.risks.length) * 100)
-        : 0;
-      const cleanRate = bucket.totalCount > 0
-        ? Math.round((bucket.cleanCount / bucket.totalCount) * 100)
-        : 0;
-      return { day, riskAvg: avgRisk, cleanAvg: cleanRate };
-    });
 }
 
 export const ManagerDashboard: React.FC = () => {
@@ -144,10 +107,9 @@ export const ManagerDashboard: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({
-    total: 0, fixedCount: 0, escalatedCount: 0, pendingCount: 0, savedValue: 0,
+    total: 0, fixedCount: 0, escalatedCount: 0, pendingCount: 0,
   });
   const [distribution, setDistribution] = useState<{ label: string; count: number; pct: number }[]>([]);
-  const [trendData, setTrendData] = useState<{ day: string; riskAvg: number; cleanAvg: number }[]>([]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -163,11 +125,9 @@ export const ManagerDashboard: React.FC = () => {
         fixedCount: computed.fixedCount,
         escalatedCount: computed.escalatedCount,
         pendingCount: computed.pendingCount,
-        savedValue: computed.savedValue,
       });
 
       setDistribution(computeRemediationDistribution(list));
-      setTrendData(computeRiskTrend(list));
     } catch (err: any) {
       console.error(err);
       setError("Failed to fetch executive dashboard metrics.");
@@ -206,12 +166,6 @@ export const ManagerDashboard: React.FC = () => {
           trend="neutral"
         />
         <MetricCard
-          label="Estimated Dollars Saved"
-          value={`$${stats.savedValue.toLocaleString()}`}
-          subtext={`${stats.fixedCount} claims auto-cleared @ $250 avg`}
-          trend="up"
-        />
-        <MetricCard
           label="Auto-Remediated Claims"
           value={stats.fixedCount}
           subtext={stats.total > 0 ? `${Math.round((stats.fixedCount / stats.total) * 100)}% auto-fix rate` : "No claims yet"}
@@ -228,37 +182,26 @@ export const ManagerDashboard: React.FC = () => {
       {/* Chart and Distribution Section */}
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "32px", marginBottom: "32px" }}>
         <div className="card">
-          <div className="card-title">Denial Risk vs. Clean Rate by Day</div>
-          {trendData.length > 0 ? (
+          <div className="card-title">Remediation & Routing Statistics</div>
+          {distribution.length > 0 ? (
             <div style={{ width: "100%", height: "260px" }}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <BarChart data={distribution} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-                  <XAxis dataKey="day" stroke="var(--text-muted)" fontSize={11} />
-                  <YAxis stroke="var(--text-muted)" fontSize={11} />
+                  <XAxis dataKey="label" stroke="var(--text-muted)" fontSize={10} tickLine={false} />
+                  <YAxis stroke="var(--text-muted)" fontSize={11} allowDecimals={false} />
                   <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="riskAvg"
-                    name="Avg Denial Risk (%)"
-                    stroke="var(--color-warning)"
-                    strokeWidth={2.5}
-                    dot={{ r: 4 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="cleanAvg"
-                    name="Clean Rate (%)"
-                    stroke="var(--color-good)"
-                    strokeWidth={2.5}
-                    dot={{ r: 4 }}
-                  />
-                </LineChart>
+                  <Bar dataKey="count" fill="#006039" radius={[4, 4, 0, 0]}>
+                    {distribution.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </div>
           ) : (
             <div style={{ textAlign: "center", padding: "48px", color: "var(--text-muted)" }}>
-              No trend data available yet. Process orders to populate.
+              No remediation data available yet. Process orders to populate.
             </div>
           )}
         </div>
@@ -294,7 +237,7 @@ export const ManagerDashboard: React.FC = () => {
           <div style={{ textAlign: "center", padding: "24px" }}>Retrieving orders list...</div>
         ) : (
           <ActivityTable
-            orders={orders}
+            orders={orders.filter((o: any) => o.status !== "clean").slice(0, 3)}
             onAction={async (id) => {
               try {
                 await apiClient.post(`/api/v1/orders/${id}/remediate`);

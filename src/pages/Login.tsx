@@ -11,7 +11,7 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = "Log in | Antigravity OTC";
+    document.title = "Log in | Quest Smart OTC";
   }, []);
 
   const handleLogin = async (e: React.FormEvent, customEmail?: string) => {
@@ -206,7 +206,7 @@ export const Login: React.FC = () => {
             letterSpacing: "-0.5px",
             textAlign: "center"
           }}>
-            Antigravity OTC Platform
+            Quest Smart OTC
           </h1>
           <p style={{
             fontSize: "13px",
@@ -232,48 +232,14 @@ export const Login: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div>
-              <label className="quest-label" htmlFor="email">Email address</label>
-              <input
-                className="quest-input"
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@hospital.org"
-              />
-            </div>
-            <div>
-              <label className="quest-label" htmlFor="password">Password</label>
-              <input
-                className="quest-input"
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-              />
-            </div>
-            <button 
-              className="quest-btn-solid" 
-              type="submit" 
-              disabled={loading}
-              style={{ marginTop: "8px", padding: "12px 24px" }}
-            >
-              {loading ? "Signing in..." : "Sign in"}
-            </button>
-          </form>
-
-          <div style={{ borderTop: "1px solid #eeeeee", marginTop: "24px", paddingTop: "16px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "8px" }}>
             <button 
               onClick={() => handleQuickLogin("admin@hospital.org")} 
-              className="quest-btn-outline"
-              style={{ width: "100%", padding: "10px 24px" }}
+              className="quest-btn-solid"
+              style={{ width: "100%", padding: "14px 24px", fontSize: "14px" }}
+              disabled={loading}
             >
-              All-Access Quick Login
+              {loading ? "Signing in..." : "Sign in"}
             </button>
           </div>
         </div>
@@ -297,7 +263,7 @@ export const Login: React.FC = () => {
             <a href="https://www.questdiagnostics.com/contact-us" target="_blank" rel="noreferrer" className="quest-footer-link">Contact us</a>
           </div>
           <div>
-            © {new Date().getFullYear()} Quest Diagnostics Incorporated. All rights reserved. Antigravity OTC Simulation Portal.
+            © {new Date().getFullYear()} Quest Diagnostics Incorporated. All rights reserved. Quest Smart OTC Simulation Portal.
           </div>
         </div>
       </footer>

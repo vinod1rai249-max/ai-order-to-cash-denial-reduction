@@ -4,6 +4,8 @@ import importlib
 import unittest
 import logging
 
+from orchestrator import graph_v4
+
 # Set env variables before imports to avoid validation failures
 os.environ["GCP_PROJECT_ID"] = os.environ.get("GCP_PROJECT_ID", "adpo-healthcare-agent")
 
@@ -47,6 +49,58 @@ class TestEvaluationV4(unittest.TestCase):
                 os.environ["GCP_PROJECT_ID"] = original_project_id
             importlib.reload(importlib.import_module("governance.governance_logger"))
             importlib.reload(importlib.import_module("ml.score_risk"))
+
+    def test_save_order_to_db_omits_unsupported_patient_name_field(self):
+        class FakeQueryJob:
+            def result(self):
+                return None
+
+        class FakeClient:
+            def __init__(self, project):
+                self.project = project
+                self.queries = []
+
+            def query(self, query, job_config=None):
+                self.queries.append((query, job_config))
+                return FakeQueryJob()
+
+        class FakeBigQueryModule:
+            ScalarQueryParameter = staticmethod(lambda name, type_name, value: {"name": name, "type": type_name, "value": value})
+            QueryJobConfig = staticmethod(lambda query_parameters=None: {"query_parameters": query_parameters or []})
+            Client = FakeClient
+
+        original_bigquery = graph_v4.bigquery
+        original_project_id = os.environ.get("GCP_PROJECT_ID")
+        original_graph_project_id = getattr(graph_v4, "GCP_PROJECT_ID", None)
+        
+        os.environ["GCP_PROJECT_ID"] = "test-project"
+        graph_v4.GCP_PROJECT_ID = "test-project"
+
+        try:
+            graph_v4.bigquery = FakeBigQueryModule()
+            fake_client = FakeClient("test-project")
+            graph_v4.bigquery.Client = lambda project: fake_client
+
+            graph_v4.save_order_to_db(
+                order={"order_id": "ORD-TEST-001", "patient_name": "Jane Doe"},
+                risk_score=0.05,
+                attempts=0,
+                history=[],
+                status="scored",
+                trace_id="TRC-001",
+            )
+
+            self.assertEqual(len(fake_client.queries), 1)
+            query = fake_client.queries[0][0]
+            self.assertNotIn("patient_name", query)
+            self.assertNotIn("@patient_name", query)
+        finally:
+            graph_v4.bigquery = original_bigquery
+            graph_v4.GCP_PROJECT_ID = original_graph_project_id
+            if original_project_id is None:
+                os.environ.pop("GCP_PROJECT_ID", None)
+            else:
+                os.environ["GCP_PROJECT_ID"] = original_project_id
 
     def test_remediation_evaluation(self):
         passed_tests = 0
