@@ -1,8 +1,11 @@
 import axios from "axios";
 import { auth } from "./auth";
 
+const apiEnvUrl = import.meta.env.VITE_API_URL;
+const baseURL = apiEnvUrl === "/api" ? "" : (apiEnvUrl || "http://localhost:8000");
+
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000",
+  baseURL,
 });
 
 // Interceptor to attach Bearer Authorization token automatically
