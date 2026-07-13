@@ -27,6 +27,8 @@ RUN npm run build
 # ---------- Stage 2: Python Backend + Nginx ----------
 FROM python:3.13-slim
 
+ENV PYTHONUNBUFFERED=1
+
 RUN apt-get update && apt-get install -y --no-install-recommends nginx supervisor && \
     rm -rf /var/lib/apt/lists/*
 

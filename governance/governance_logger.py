@@ -36,9 +36,8 @@ def init_governance_sink() -> None:
     dataset.location = "US"
     try:
         client.create_dataset(dataset, exists_ok=True)
-    except GoogleAPICallError as e:
-        logger.error(f"Failed to create dataset {dataset_ref}: {e}")
-        raise
+    except Exception as e:
+        logger.warning(f"Failed to create dataset {dataset_ref}: {e}. Proceeding assuming it already exists.")
 
     table_id = get_table_ref("governance", "governance_sink")
     schema = [
@@ -56,9 +55,8 @@ def init_governance_sink() -> None:
     try:
         client.create_table(table, exists_ok=True)
         logger.info(f"Governance table {table_id} verified/created.")
-    except GoogleAPICallError as e:
-        logger.error(f"Failed to create table {table_id}: {e}")
-        raise
+    except Exception as e:
+        logger.warning(f"Failed to create table {table_id}: {e}. Proceeding assuming it already exists.")
 
 def log_governance_sink(
     action: str,
