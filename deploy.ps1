@@ -14,8 +14,8 @@
 
 $PROJECT_ID = "adpo-healthcare-agent"
 $REGION = "us-central1"
-$SERVICE_NAME = "antigravity-otc"
-$REPO_NAME = "antigravity-repo"
+$SERVICE_NAME = "quest-smart-otc"
+$REPO_NAME = "quest-smart-otc-repo"
 $IMAGE_TAG = "latest"
 $IMAGE_URL = "$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/${SERVICE_NAME}:$IMAGE_TAG"
 
@@ -24,7 +24,7 @@ Write-Host ">>> Creating Artifact Registry repository (if not exists)..." -Foreg
 gcloud artifacts repositories create $REPO_NAME `
   --repository-format=docker `
   --location=$REGION `
-  --description="Antigravity OTC container images" `
+  --description="Quest Smart OTC container images" `
   --project=$PROJECT_ID 2>$null
 
 # Step 2: Build with Cloud Build
